@@ -1,0 +1,21 @@
+{
+  "name": "serverless-react-ssr-infrastructure",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy",
+    "diff": "cdk diff"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.238.0",
+    "constructs": "^10.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "aws-cdk": "^2.1106.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

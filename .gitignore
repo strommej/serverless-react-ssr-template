@@ -1,0 +1,6 @@
+node_modules/
+build/
+.react-router/
+cdk.out/
+*.js.map
+*.d.ts
