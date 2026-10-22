@@ -23,7 +23,7 @@ export class ServerlessReactSsrStack extends cdk.Stack {
 
     // --- Lambda: SSR function ---
     const ssrFunction = new lambda.Function(this, "SSR", {
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: "lambda.handler",
       code: lambda.Code.fromAsset(path.join(BUILD_PATH, "server")),
       memorySize: 512,

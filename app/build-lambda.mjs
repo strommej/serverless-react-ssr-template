@@ -4,7 +4,7 @@ await build({
   entryPoints: ["server/lambda.ts"],
   bundle: true,
   platform: "node",
-  target: "node22",
+  target: "node24",
   format: "cjs",
   outfile: "build/server/lambda.js",
   external: [],
