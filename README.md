@@ -22,7 +22,7 @@ The included demo page makes the streaming benefit visible — three simulated d
                     |                         |
               +-----v-----+          +-------v--------+
               |  S3 Bucket |          |     Lambda     |
-              |  (static)  |          |   (Node.js 22) |
+              |  (static)  |          |   (Node.js 24) |
               +------------+          | React Router 7 |
                                       |  Function URL  |
                                       +----------------+
@@ -36,7 +36,7 @@ The included demo page makes the streaming benefit visible — three simulated d
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 24+
 - AWS CLI configured with credentials
 - AWS CDK (`npm install -g aws-cdk` or use `npx`)
 
@@ -139,4 +139,4 @@ This is intentionally minimal. Here are pointers for common additions:
 - **Tailwind CSS 4** — utility-first styling
 - **esbuild** — bundles the Lambda handler
 - **AWS CDK** — infrastructure as code (TypeScript)
-- **Node.js 22** — Lambda runtime
+- **Node.js 24** — Lambda runtime

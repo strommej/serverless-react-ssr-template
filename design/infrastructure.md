@@ -16,7 +16,7 @@ React Router 7 SSR application deployed to AWS with CDK. No auth, no custom doma
                     |                         |
               +-----v-----+          +-------v--------+
               |  S3 Bucket |          |     Lambda     |
-              |  (static)  |          |   (Node.js 22) |
+              |  (static)  |          |   (Node.js 24) |
               +------------+          | React Router 7 |
                                       |  Function URL  |
                                       +----------------+
@@ -39,7 +39,7 @@ The template uses the CloudFront-issued `*.cloudfront.net` domain. Custom domain
 
 ### Lambda Function (SSR)
 
-- **Runtime:** Node.js 22.x
+- **Runtime:** Node.js 24.x
 - **Handler:** Converts Lambda Function URL events to Web Request API, passes them through React Router's `createRequestHandler`, and streams the response back
 - **Trigger:** Lambda Function URL (streaming mode)
 - **Memory:** 512 MB (start here, tune based on metrics)
@@ -118,7 +118,7 @@ export default {
 
 ### Lambda Bundling
 
-A separate esbuild step bundles the Lambda handler into a single CJS file targeting Node.js 22. This runs after the React Router build:
+A separate esbuild step bundles the Lambda handler into a single CJS file targeting Node.js 24. This runs after the React Router build:
 
 ```javascript
 // build-lambda.mjs
@@ -128,7 +128,7 @@ await build({
   entryPoints: ["server/lambda.ts"],
   bundle: true,
   platform: "node",
-  target: "node22",
+  target: "node24",
   format: "cjs",
   outfile: "build/server/lambda.js",
   external: [],
@@ -156,7 +156,7 @@ const assetsBucket = new s3.Bucket(this, "Assets", {
 
 // 2. Lambda function for SSR
 const ssrFunction = new lambda.Function(this, "SSR", {
-  runtime: lambda.Runtime.NODEJS_22_X,
+  runtime: lambda.Runtime.NODEJS_24_X,
   handler: "lambda.handler",
   code: lambda.Code.fromAsset("../app/build/server"),
   memorySize: 512,
