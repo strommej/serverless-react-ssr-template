@@ -39,23 +39,53 @@ export class ServerlessReactSsrStack extends cdk.Stack {
       invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
     });
 
+    // --- CloudFront: viewer host forwarding ---
+    const viewerRequestFn = new cloudfront.Function(this, "ViewerRequest", {
+      code: cloudfront.FunctionCode.fromFile({
+        filePath: path.join(__dirname, "../functions/viewer-request.js"),
+      }),
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+    });
+
+    // --- CloudFront: SSR cache policy ---
+    // Pages are cached only when a route sends Cache-Control (e.g. s-maxage).
+    // Responses without it pass straight through to Lambda.
+    const ssrCachePolicy = new cloudfront.CachePolicy(this, "SSRCachePolicy", {
+      minTtl: cdk.Duration.seconds(0),
+      defaultTtl: cdk.Duration.seconds(0),
+      maxTtl: cdk.Duration.days(1),
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+      enableAcceptEncodingGzip: true,
+      enableAcceptEncodingBrotli: true,
+    });
+
+    const staticFile: cloudfront.BehaviorOptions = {
+      origin: origins.S3BucketOrigin.withOriginAccessControl(assetsBucket),
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+    };
+
     // --- CloudFront: Distribution ---
     const distribution = new cloudfront.Distribution(this, "CDN", {
       defaultBehavior: {
         origin: new origins.FunctionUrlOrigin(functionUrl),
         viewerProtocolPolicy:
           cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        cachePolicy: ssrCachePolicy,
         originRequestPolicy:
           cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        functionAssociations: [
+          {
+            function: viewerRequestFn,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
       },
       additionalBehaviors: {
-        "assets/*": {
-          origin: origins.S3BucketOrigin.withOriginAccessControl(assetsBucket),
-          viewerProtocolPolicy:
-            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-        },
+        "assets/*": staticFile,
+        "favicon.ico": staticFile,
       },
     });
 
