@@ -31,7 +31,10 @@ Single entry point for all traffic. Routes requests based on path patterns:
 | Path Pattern | Origin | Cache Policy |
 |---|---|---|
 | `/assets/*` | S3 bucket | Long-lived (immutable, hashed filenames) |
-| `/*` (default) | Lambda Function URL | No cache (SSR) |
+| `/favicon.ico` | S3 bucket | Long-lived |
+| `/*` (default) | Lambda Function URL | Cached only when the route sends `Cache-Control` |
+
+A viewer-request CloudFront Function on the default behavior copies the viewer's `Host` header into `x-viewer-host`. CloudFront sends the Function URL's own domain as `Host`, so without it `request.url` in loaders would point at the Lambda URL instead of the public site.
 
 CloudFront handles TLS termination and serves as the CDN. No API Gateway needed — Lambda Function URLs provide an HTTPS endpoint directly, which keeps costs down and reduces latency.
 
@@ -312,6 +315,19 @@ new route53.ARecord(this, "SiteAlias", {
 
 Note: ACM certificate must be in `us-east-1` (CloudFront requirement). Use `crossRegionReferences: true` in the stack if deploying to another region.
 
+If both `example.com` and `www.example.com` point at the distribution, redirect one to the other so search engines index a single site. Add this to `infrastructure/functions/viewer-request.js` before the `x-viewer-host` line:
+
+```javascript
+var host = request.headers.host.value;
+if (host.indexOf("www.") === 0) {
+  return {
+    statusCode: 301,
+    statusDescription: "Moved Permanently",
+    headers: { location: { value: "https://" + host.slice(4) + request.uri } },
+  };
+}
+```
+
 ### WAF
 
 AWS WAF for rate limiting and bot protection (~$7/month):
@@ -371,20 +387,30 @@ new cloudwatch.Alarm(this, "SSRDuration", {
 
 ### Edge Caching for SSR
 
-Short TTL caching on the default CloudFront behavior for pages that don't need per-request freshness:
+The default behavior uses a cache policy with a default TTL of 0, so nothing is cached unless a route opts in by sending `Cache-Control`:
 
 ```typescript
 const ssrCachePolicy = new cloudfront.CachePolicy(this, "SSRCachePolicy", {
-  defaultTtl: Duration.seconds(10),
-  maxTtl: Duration.minutes(5),
   minTtl: Duration.seconds(0),
+  defaultTtl: Duration.seconds(0),
+  maxTtl: Duration.days(1),
+  headerBehavior: cloudfront.CacheHeaderBehavior.none(),
   queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+  cookieBehavior: cloudfront.CacheCookieBehavior.none(),
   enableAcceptEncodingGzip: true,
   enableAcceptEncodingBrotli: true,
 });
 ```
 
-Set `Cache-Control: no-cache` from routes that must always be fresh.
+To cache a public page, export `headers` from its route:
+
+```typescript
+export function headers() {
+  return { "Cache-Control": "public, max-age=60, s-maxage=300" };
+}
+```
+
+Cookies are not part of the cache key, so never send a public `Cache-Control` from a page that depends on the session.
 
 ## Cost Estimate (Low Traffic)
 
