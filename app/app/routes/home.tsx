@@ -8,13 +8,19 @@ function delay<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(resolve, ms, value));
 }
 
+const TITLE = "Serverless React SSR";
+const DESCRIPTION = "React Router 7 streaming SSR on AWS Lambda.";
+
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Serverless React SSR" },
-    {
-      name: "description",
-      content: "React Router 7 streaming SSR on AWS Lambda.",
-    },
+    { title: TITLE },
+    { name: "description", content: DESCRIPTION },
+    { property: "og:type", content: "website" },
+    { property: "og:title", content: TITLE },
+    { property: "og:description", content: DESCRIPTION },
+    { name: "twitter:card", content: "summary" },
+    { name: "twitter:title", content: TITLE },
+    { name: "twitter:description", content: DESCRIPTION },
   ];
 }
 

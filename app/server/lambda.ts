@@ -9,9 +9,13 @@ import * as build from "../build/server/index.js";
 const requestHandler = createRequestHandler(build, process.env.NODE_ENV);
 
 function createRequest(event: FunctionURLEvent): Request {
+  // CloudFront replaces the Host header with the Function URL's domain, so the
+  // viewer-request CloudFront Function passes the public host in x-viewer-host.
+  const host =
+    event.headers?.["x-viewer-host"] ?? event.requestContext.domainName;
   const url = new URL(
     event.rawPath + (event.rawQueryString ? `?${event.rawQueryString}` : ""),
-    `https://${event.requestContext.domainName}`
+    `https://${host}`
   );
 
   const headers = new Headers();

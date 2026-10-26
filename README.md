@@ -28,7 +28,7 @@ The included demo page makes the streaming benefit visible — three simulated d
                                       +----------------+
 ```
 
-- **CloudFront** terminates TLS and routes traffic. Static assets (`/assets/*`) go to S3 with long cache headers. Everything else goes to Lambda for SSR.
+- **CloudFront** terminates TLS and routes traffic. Static assets (`/assets/*`, `/favicon.ico`) go to S3 with long cache headers. Everything else goes to Lambda for SSR, and is cached at the edge only when a route sends a `Cache-Control` header.
 - **Lambda Function URL** with `RESPONSE_STREAM` invoke mode streams HTML chunks to the browser as React renders them. No API Gateway needed.
 - **S3** hosts the Vite-built client assets (JS, CSS) with content-hashed filenames for cache busting.
 
@@ -71,6 +71,8 @@ app/                        # React Router 7 application
   app/
     routes/
       home.tsx              # Streaming demo (Suspense + Await)
+      robots-txt.ts         # /robots.txt (points crawlers at the sitemap)
+      sitemap-xml.ts        # /sitemap.xml (list public pages here)
       splat.tsx              # Catch-all 404 handler
     root.tsx                # HTML shell and error boundary
     routes.ts               # Route definitions
@@ -108,6 +110,15 @@ Browser receives:
 ```
 
 Without streaming, the browser would see nothing until the slowest data source finishes at 3 seconds.
+
+## SEO
+
+- **Server-rendered HTML.** Crawlers get the full page. React Router's default server entry uses `isbot` to wait for all Suspense boundaries before sending HTML to bots, so streamed content is indexed too.
+- **Meta tags.** Each route sets its title, description and Open Graph / Twitter card tags in its `meta` export. Add an `og:image` once you have one.
+- **Canonical URLs.** `root.tsx` adds `<link rel="canonical">` for every page. A CloudFront Function passes the public host to Lambda in `x-viewer-host`, because CloudFront otherwise sends the Function URL's own domain.
+- **robots.txt and sitemap.xml** are resource routes. Add new public pages to the `PATHS` list in `sitemap-xml.ts`.
+- **Edge caching.** Pages are not cached by default. To cache a public page, export `headers` from its route, for example `{ "Cache-Control": "public, max-age=60, s-maxage=300" }`. The streaming demo on the home page is left uncached so the effect stays visible.
+- **Custom domain.** If you serve both `www` and the apex domain, redirect one to the other so search engines see a single site (see [design/infrastructure.md](design/infrastructure.md#custom-domain)).
 
 ## Extending This Template
 
