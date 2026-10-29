@@ -36,7 +36,7 @@ Single entry point for all traffic. Routes requests based on path patterns:
 
 A viewer-request CloudFront Function on the default behavior copies the viewer's `Host` header into `x-viewer-host`. CloudFront sends the Function URL's own domain as `Host`, so without it `request.url` in loaders would point at the Lambda URL instead of the public site.
 
-CloudFront handles TLS termination and serves as the CDN. No API Gateway needed — Lambda Function URLs provide an HTTPS endpoint directly, which keeps costs down and reduces latency.
+CloudFront handles TLS termination and serves as the CDN. No API Gateway needed — Lambda Function URLs provide an HTTPS endpoint directly, which keeps costs down and reduces latency. The Function URL uses IAM auth, and CloudFront signs requests to it with Origin Access Control, so the Lambda cannot be called directly and bypass CloudFront. This works because the app only serves GET requests; POST/PUT through OAC require the client to send an `x-amz-content-sha256` header.
 
 The template uses the CloudFront-issued `*.cloudfront.net` domain. Custom domains can be added later (see [Custom Domain](#custom-domain)).
 
@@ -171,14 +171,14 @@ const ssrFunction = new lambda.Function(this, "SSR", {
 
 // 3. Lambda Function URL (streaming)
 const functionUrl = ssrFunction.addFunctionUrl({
-  authType: lambda.FunctionUrlAuthType.NONE,
+  authType: lambda.FunctionUrlAuthType.AWS_IAM, // only CloudFront (via OAC) can invoke
   invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
 });
 
 // 4. CloudFront distribution
 const distribution = new cloudfront.Distribution(this, "CDN", {
   defaultBehavior: {
-    origin: new origins.FunctionUrlOrigin(functionUrl),
+    origin: origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl),
     viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
     cachePolicy: CachePolicy.CACHING_DISABLED,
     originRequestPolicy: OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,

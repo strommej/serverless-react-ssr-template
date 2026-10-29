@@ -34,8 +34,9 @@ export class ServerlessReactSsrStack extends cdk.Stack {
     });
 
     // --- Lambda Function URL (streaming) ---
+    // IAM auth: only CloudFront (signing via Origin Access Control) can call it.
     const functionUrl = ssrFunction.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.NONE,
+      authType: lambda.FunctionUrlAuthType.AWS_IAM,
       invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
     });
 
@@ -70,7 +71,7 @@ export class ServerlessReactSsrStack extends cdk.Stack {
     // --- CloudFront: Distribution ---
     const distribution = new cloudfront.Distribution(this, "CDN", {
       defaultBehavior: {
-        origin: new origins.FunctionUrlOrigin(functionUrl),
+        origin: origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl),
         viewerProtocolPolicy:
           cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: ssrCachePolicy,
